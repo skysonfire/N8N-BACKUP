@@ -1,0 +1,354 @@
+{
+  "createdAt": "2025-09-02T10:37:02.883Z",
+  "updatedAt": "2025-09-02T10:37:02.883Z",
+  "id": "IPHAqkM2bDEuM2i6",
+  "name": "My workflow",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "524c40cb-9404-49b3-bb68-91a6df518549",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -1232,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "400c349a-6694-4ebc-8cc8-4b36b30cdd05",
+              "name": "folderName",
+              "value": "=Backup_{{ $now.format('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f62253d6-a8ce-4e4c-bddf-ecfc1ccb932e",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1008,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://n8n-upai.onrender.com/api/v1/workflows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "055691b6-1adb-4714-b6ab-4f7d5b8a2622",
+      "name": "Get All Workflows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -800,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "9e83a527-56fc-4c62-ac9a-257c8f294055",
+      "name": "Extract Workflows Array",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [
+        -576,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "31fec47d-bdac-475f-bbab-05102ffa659f",
+      "name": "Split Workflows",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -352,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "workflow-content",
+              "name": "workflowContent",
+              "value": "={{ JSON.stringify($json, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "workflow-filename",
+              "name": "fileName",
+              "value": "={{ $json.name.replace(/[^a-zA-Z0-9]/g, '_') }}.json",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f45c2e44-7896-47c1-bf01-f2de9a9d5738",
+      "name": "Prepare File Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "workflowContent",
+        "options": {
+          "fileName": "={{ $json.fileName }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        192
+      ],
+      "id": "d4824cec-ca9e-4b5d-84be-9eb4aba190bf",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "owner": {
+          "__rl": true,
+          "value": "lakshit77",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-backup",
+          "mode": "list",
+          "cachedResultName": "n8n-backup",
+          "cachedResultUrl": "https://github.com/lakshit77/n8n-backup"
+        },
+        "filePath": "={{ $('Set Variables').first().json.folderName }}/{{ $json.fileName }}",
+        "binaryData": true,
+        "commitMessage": "=Backup {{ $json.fileName }} - {{ $now.setZone('Asia/Kolkata').format('yyyy-MM-dd HH:mm') }}"
+      },
+      "id": "5034e380-b735-43ee-b2bd-a7d2784393ae",
+      "name": "Upload to GitHub",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        320,
+        192
+      ],
+      "webhookId": "7fd0e004-abbd-4a7a-91ed-e2e15e62399e",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "owner": {
+          "__rl": true,
+          "value": "lakshit77",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-backup",
+          "mode": "list",
+          "cachedResultName": "n8n-backup",
+          "cachedResultUrl": "https://github.com/lakshit77/n8n-backup"
+        },
+        "filePath": "={{ $('Set Variables').first().json.folderName }}/README.md",
+        "fileContent": "=# N8N Workflow Backup - {{ $('Set Variables').first().json.folderName }}\n\nThis folder contains the backup of all N8N workflows as of {{ $now.setZone('Asia/Kolkata').format('yyyy-MM-dd') }}\n\n## Backup Details\n- Backup Time: {{ $now.setZone('Asia/Kolkata').format('yyyy-MM-dd HH:mm:ss') }}\n- Total Workflows: {{ $('Extract Workflows Array').all().length }}\n\n## Files\nEach workflow is saved as a separate JSON file with sanitized filenames.\n\n---\n*Automatically generated by N8N Backup Workflow*",
+        "commitMessage": "=Add README for backup folder {{ $('Set Variables').first().json.folderName }}"
+      },
+      "id": "dc49bf72-b7da-434d-bdd2-e75b4834994e",
+      "name": "Create README",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -32
+      ],
+      "webhookId": "2a1010a4-c95f-4a35-8892-33c74a4cb546"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1gqmegitfHNqya-lEUdaQ16hBVD8okXi2oeGr8V4nWFM",
+          "mode": "list",
+          "cachedResultName": "Daily backup n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gqmegitfHNqya-lEUdaQ16hBVD8okXi2oeGr8V4nWFM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gqmegitfHNqya-lEUdaQ16hBVD8okXi2oeGr8V4nWFM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "DateTime": "={{$now.setZone('Asia/Kolkata').format('yyyy-MM-dd HH:mm:ss')}}",
+            "Folder Name": "={{ $('Set Variables').first().json.folderName }}",
+            "File Name": "={{ $json.fileName || 'ERROR' }}",
+            "Status": "={{ $json.error ? 'FAILED' : 'SUCCESS' }}",
+            "Error Message": "={{ $json.error || '' }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        544,
+        192
+      ],
+      "id": "d74056ea-6d06-4db8-ad14-8bfdd7c1d4ab",
+      "name": "Log to Sheet"
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Get All Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Workflows": {
+      "main": [
+        [
+          {
+            "node": "Extract Workflows Array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Workflows Array": {
+      "main": [
+        [
+          {
+            "node": "Split Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Workflows": {
+      "main": [
+        [
+          {
+            "node": "Create README",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare File Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare File Content": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to GitHub": {
+      "main": [
+        [
+          {
+            "node": "Split Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "bc86a21b-19f3-4095-ac38-98bf4aa95913",
+  "triggerCount": 0,
+  "shared": [
+    {
+      "createdAt": "2025-09-02T10:37:02.887Z",
+      "updatedAt": "2025-09-02T10:37:02.887Z",
+      "role": "workflow:owner",
+      "workflowId": "IPHAqkM2bDEuM2i6",
+      "projectId": "eutJaT8nD3Xq2uvZ"
+    }
+  ],
+  "tags": []
+}
